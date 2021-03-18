@@ -129,7 +129,7 @@ bool Parser::queryDIR(string dir_name) {
 			return false;
 		}
 	}
-	return true;   
+	return true;   	
 }
 
 bool Parser::query(string file_name) {
