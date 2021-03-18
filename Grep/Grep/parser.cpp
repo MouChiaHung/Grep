@@ -118,7 +118,9 @@ bool Parser::queryDIR(string dir_name) {
         if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
             str_tmp = wc2str(fd.cFileName);
             string fname = dir_name + "\\" + str_tmp;
-            targets.push_back(fname);
+            if (std::find(targets.begin(), targets.end(), fname) == targets.end()) {
+                targets.push_back(fname);
+            }
         }
     } while(::FindNextFile(hFind, &fd));    
 
@@ -133,6 +135,7 @@ bool Parser::queryDIR(string dir_name) {
 }
 
 bool Parser::query(string file_name) {
+    vector<string> targets;
     if (mCwd.empty()) {
         return false;
     }
