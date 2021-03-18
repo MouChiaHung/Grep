@@ -74,22 +74,29 @@ string Parser::wc2str(const wchar_t* wc) {
 }
 
 bool Parser::queryDIR(string dir_name) {
-    vector<string> sameLayerFiles;
+    vector<string> sameLayerFiles; //memroy is happy for having an auto-free local variable
     bool ret = false;
+    if (mCwd.empty()) {
+        return false;
+    }
+    if (keywords.empty()) {
+        return false;
+    }
     string dir = "";
-    //employee wide char
+    int fis_len;
+
+    //get absolute path
     dir = dir_name  + "\\*.*";;
-    //employee WIN File API
+    //WIN File API
     WIN32_FIND_DATA  fd;
     WIN32_FIND_DATA  fd_dir;
     HANDLE hFind = ::FindFirstFile(getWC(dir.c_str()), &fd);
     HANDLE hFind_dir = ::FindFirstFile(getWC(dir.c_str()), &fd_dir);
     string str_subdir;
     string str_tmp;
-    //recursive call for diving into sub-directories
+
     do {
         if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
-            //ignore trival file node
             while(true) {
                 FindNextFile(hFind_dir, &fd_dir);
                 str_tmp = wc2str(fd_dir.cFileName);
@@ -97,27 +104,33 @@ bool Parser::queryDIR(string dir_name) {
                     break;
                 }
             }
+        
             if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
                 str_subdir = wc2str(fd_dir.cFileName);
                 ret = queryDIR(dir_name + "\\" + str_subdir);
             }
         }
     } while(::FindNextFile(hFind_dir, &fd_dir));
+    
 
-    //iterate same layer files
     do { 
-        if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+        if(!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
             str_tmp = wc2str(fd.cFileName);
             string fname = dir_name + "\\" + str_tmp;
-            sameLayerFiles.push_back(fname);
+            if (std::find(sameLayerFiles.begin(), sameLayerFiles.end(), fname) == sameLayerFiles.end()) {
+                sameLayerFiles.push_back(fname);
+            }
         }
-    } while(::FindNextFile(hFind, &fd));    
+    }while(::FindNextFile(hFind, &fd));     
 
     for (std::vector<string>::iterator it=sameLayerFiles.begin(); it!=sameLayerFiles.end(); it++) {
-        std::cout << "Parsing target file:" << *it << "..." << std::endl;
-        //Doing something with every file here
+        std::cout << "Parsing " << *it << "..." << std::endl;
+        if (query(*it) == false) {
+            LOG("FAILED for %s\n", (*it).c_str());
+            return false;
+        }
     }
-    return true;   
+    return true;
 }
 
 bool Parser::query(string file_name) {
