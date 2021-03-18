@@ -96,32 +96,31 @@ bool Parser::queryDIR(string dir_name) {
     string str_tmp;
 
     do {
-        if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
+        if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
             while(true) {
                 FindNextFile(hFind_dir, &fd_dir);
                 str_tmp = wc2str(fd_dir.cFileName);
-                if (str_tmp.compare(".") && str_tmp.compare("..")){
+                if (str_tmp.compare(".") && str_tmp.compare("..")) {
                     break;
                 }
             }
-        
-            if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
+            if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                 str_subdir = wc2str(fd_dir.cFileName);
                 ret = queryDIR(dir_name + "\\" + str_subdir);
             }
         }
-    } while(::FindNextFile(hFind_dir, &fd_dir));
+    } while (::FindNextFile(hFind_dir, &fd_dir));
     
 
     do { 
-        if(!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
+        if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
             str_tmp = wc2str(fd.cFileName);
             string fname = dir_name + "\\" + str_tmp;
             if (std::find(sameLayerFiles.begin(), sameLayerFiles.end(), fname) == sameLayerFiles.end()) {
                 sameLayerFiles.push_back(fname);
             }
         }
-    }while(::FindNextFile(hFind, &fd));     
+    } while (::FindNextFile(hFind, &fd));     
 
     for (std::vector<string>::iterator it=sameLayerFiles.begin(); it!=sameLayerFiles.end(); it++) {
         std::cout << "Parsing " << *it << "..." << std::endl;
