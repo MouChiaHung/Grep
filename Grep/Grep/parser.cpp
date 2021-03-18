@@ -74,48 +74,62 @@ string Parser::wc2str(const wchar_t* wc) {
 }
 
 bool Parser::queryDIR(string dir_name) {
-    if (mCwd.empty()) {
-        return false;
-    }
-    if (keywords.empty()) {
-        return false;
-    }
-    string dir = "";
-    string path_out = "";
-    int fis_len;
+	bool ret = false;
+	if (mCwd.empty()) {
+		return false;
+	}
+	if (keywords.empty()) {
+		return false;
+	}
+	string dir = "";
+	int fis_len;
 
-    //get absolute path
-    dir = mCwd + "\\" + dir_name + "/*.*";;
-    path_out = mCwd + "\\" + "out" + ".txt";
-    //WIN File API
-    vector<string> targets;
-    WIN32_FIND_DATA  fd;
-    wchar_t* pwc = getWC(dir.c_str());
-    HANDLE hFind = ::FindFirstFile(pwc, &fd);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            // read all (real) files in current folder
-            // , delete '!' read other 2 default folder . and ..
-            if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                string fname = mCwd + "\\" + dir_name + "\\" + wc2str(fd.cFileName);
-                targets.push_back(fname);
-            }
-        } while (::FindNextFile(hFind, &fd));
-        ::FindClose(hFind);
-    }
+	//employee wide char
+	dir = dir_name  + "\\*.*";;
+	//employee WIN File API
+	vector<string> targets;
+	WIN32_FIND_DATA  fd;
+	WIN32_FIND_DATA  fd_dir;
+	HANDLE hFind = ::FindFirstFile(getWC(dir.c_str()), &fd);
+	HANDLE hFind_dir = ::FindFirstFile(getWC(dir.c_str()), &fd_dir);
+	string str_subdir;
+	string str_tmp;
 
-    for (std::vector<string>::iterator it = targets.begin(); it != targets.end(); it++) {
-        //std::cout << *it << std::endl;
-        if (query(*it) == false) {
-            LOG("FAILED for %s\n", (*it).c_str());
-            return false;
-        }
-    }
+    //recursive call for diving into sub-directories
+	do {
+		if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
+			//ignore trival file node
+            while(true) {
+				FindNextFile(hFind_dir, &fd_dir);
+				str_tmp = wc2str(fd_dir.cFileName);
+				if (str_tmp.compare(".") && str_tmp.compare("..")){
+					break;
+				}
+			}
+			if ((fd_dir.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ) {
+				str_subdir = wc2str(fd_dir.cFileName);
+				ret = queryDIR(dir_name + "\\" + str_subdir);
+			}
+		}
+	} while(::FindNextFile(hFind_dir, &fd_dir));
+	
+    //iterate same layer files
+	do { 
+        if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			str_tmp = wc2str(fd.cFileName);
+			string fname = dir_name + "\\" + str_tmp;
+            targets.push_back(fname);
+		}
+    } while(::FindNextFile(hFind, &fd)); 	
 
-    LOG("Summary in %s \n", path_out.c_str());
-    if (pwc)
-        delete[](pwc);
-    return true;
+	for (std::vector<string>::iterator it=targets.begin(); it!=targets.end(); it++) {
+		std::cout << "Parsing target file:" << *it << "..." << std::endl;
+		if (query(*it) == false) {
+			LOG("FAILED for %s\n", (*it).c_str());
+			return false;
+		}
+	}
+	return true;   
 }
 
 bool Parser::query(string file_name) {
